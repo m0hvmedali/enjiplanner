@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { INITIAL_PLAN } from './data';
 import { StudyPlan, SubjectId, Task, UserProfile, WeeklySchedule, AnalysisResponse } from './types';
-import { getStudyPlan, updateTaskStatus } from './services/supabase';
+import { getStudyPlan, updateTaskStatus } from './services/planService';
 import { getLastUser, saveUserProfile, getSchedule, getDailyEntry, saveDailyEntry } from './services/storage';
 import { analyzeDayAndPlan } from './services/geminiService';
 
@@ -304,8 +304,12 @@ function App() {
       setReflection(text);
       await saveDailyEntry(userProfile.name, text, res);
       window.location.hash = '#/report';
-    } catch (e) {
-      alert('فشل التحليل. تأكد من اتصالك بالإنترنت ومفتاح الـ API.');
+    } catch (e: any) {
+      if (e?.message === 'QUOTA_EXCEEDED') {
+        alert('استنفدت حصة الذكاء الاصطناعي (Quota Exceeded). يرجى المحاولة لاحقاً أو مراجعة إعدادات الـ API.');
+      } else {
+        alert('فشل التحليل. تأكد من اتصالك بالإنترنت ومفتاح الـ API.');
+      }
     }
   };
 

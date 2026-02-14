@@ -22,10 +22,18 @@ const Dashboard: React.FC<DashboardProps> = ({ lastAnalysis, onNavigate }) => {
             try {
                 const freshQuote = await getFreshInspiration();
                 setInspiration(freshQuote);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching quote", error);
+
+                // Special handling for quota or general failure
                 if (lastAnalysis?.motivationalMessage) {
                     setInspiration(lastAnalysis.motivationalMessage);
+                } else if (error?.message === 'QUOTA_EXCEEDED') {
+                    setInspiration({
+                        text: "تذكر أن الصبر مفتاح الفرج، وأن كل مجهود تبذله اليوم هو استثمار في مستقبلك.",
+                        source: "رفيق (رسالة طوارئ)",
+                        category: "wisdom"
+                    });
                 } else {
                     setInspiration({
                         text: "إن الله لا يضيع أجر من أحسن عملاً.",

@@ -12,7 +12,7 @@ const SAFETY_SETTINGS = [
     { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// Helper to retry calls if the model is overloaded (503)
+// Helper to retry calls if the model is overloaded (503) or handle Quota (429)
 async function callWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
     try {
         return await fn();
@@ -21,11 +21,24 @@ async function callWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000)
             error?.status === 503 ||
             (error?.message && (error.message.includes('503') || error.message.includes('overloaded')));
 
+        const isQuotaExceeded =
+            error?.status === 429 ||
+            (error?.message && (error.message.includes('429') || error.message.includes('quota')));
+
         if (retries > 0 && isOverloaded) {
             console.warn(`Gemini API overloaded. Retrying in ${delay}ms... (${retries} attempts left)`);
             await new Promise(resolve => setTimeout(resolve, delay));
             return callWithRetry(fn, retries - 1, delay * 2);
         }
+
+        if (isQuotaExceeded) {
+            console.error('Gemini API Quota Exceeded (429). Returning fallback.');
+            // We throw a specific error that the UI can catch and show fallback for
+            const quotaError = new Error('QUOTA_EXCEEDED');
+            (quotaError as any).status = 429;
+            throw quotaError;
+        }
+
         throw error;
     }
 }
