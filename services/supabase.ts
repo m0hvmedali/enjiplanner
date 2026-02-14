@@ -3,10 +3,11 @@ import { StudyPlan, Task } from '../types';
 import { INITIAL_PLAN } from '../data';
 
 // Configuration: If keys are missing, we fallback to local storage mode
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://pawwqdaiucbvohsgmtop.supabase.co';
-const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhd3dxZGFpdWNidm9oc2dtdG9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMTQ5MDgsImV4cCI6MjA3ODc5MDkwOH0.EuNNd8Cj9TBxJvmPARhhR1J1KPwoS3X46msX-MhriRk';
+// Configuration: Use Vite environment variables with valid fallbacks
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://pawwqdaiucbvohsgmtop.supabase.co';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhd3dxZGFpdWNidm9oc2dtdG9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMTQ5MDgsImV4cCI6MjA3ODc5MDkwOH0.EuNNd8Cj9TBxJvmPARhhR1J1KPwoS3X46msX-MhriRk';
 
-const isSupabaseConfigured = SUPABASE_URL && SUPABASE_KEY;
+const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
 export const supabase = isSupabaseConfigured
   ? createClient(SUPABASE_URL, SUPABASE_KEY)

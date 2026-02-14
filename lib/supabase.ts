@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Use environment variables for Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+// Safe configuration with fallbacks for development/production
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://pawwqdaiucbvohsgmtop.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Guard against missing URL/Key to prevent crashing the whole app
+export const supabase = (supabaseUrl && supabaseKey)
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
 
 /**
  * SQL Schema Reference for Supabase:
