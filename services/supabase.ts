@@ -3,13 +3,13 @@ import { StudyPlan, Task } from '../types';
 import { INITIAL_PLAN } from '../data';
 
 // Configuration: If keys are missing, we fallback to local storage mode
-const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || '';
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://pawwqdaiucbvohsgmtop.supabase.co';
+const SUPABASE_KEY = process.env.REACT_APP_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhd3dxZGFpdWNidm9oc2dtdG9wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMTQ5MDgsImV4cCI6MjA3ODc5MDkwOH0.EuNNd8Cj9TBxJvmPARhhR1J1KPwoS3X46msX-MhriRk';
 
 const isSupabaseConfigured = SUPABASE_URL && SUPABASE_KEY;
 
-export const supabase = isSupabaseConfigured 
-  ? createClient(SUPABASE_URL, SUPABASE_KEY) 
+export const supabase = isSupabaseConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
 // Mock database interactions using LocalStorage if Supabase is not present
@@ -35,12 +35,12 @@ export const updateTaskStatus = async (
   taskId: string,
   isCompleted: boolean
 ): Promise<StudyPlan> => {
-  
+
   // Deep clone to avoid mutation issues
   const newPlan = JSON.parse(JSON.stringify(currentPlan)) as StudyPlan;
-  
+
   const subject = newPlan.subjects[subjectId as keyof typeof newPlan.subjects];
-  
+
   // Helper to find and update task
   const updateInList = (list: Task[]) => {
     const task = list.find(t => t.id === taskId);
@@ -50,7 +50,7 @@ export const updateTaskStatus = async (
   if (subject.tasks) {
     updateInList(subject.tasks);
   }
-  
+
   if (subject.sections) {
     subject.sections.forEach(sec => updateInList(sec.tasks));
   }

@@ -2,7 +2,7 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Modality } from "@google
 import { WeeklySchedule, AnalysisResponse, GradeLevel, MotivationalMessage, VoiceTutorResponse } from "../types";
 
 // Use Vite environment variables for the Gemini API key.
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyA5cvXlPwQ08d3exsf21nu5rC4hbLKyhDw' });
 
 // Safety settings to prevent blocking legitimate requests about stress/anxiety
 const SAFETY_SETTINGS = [
