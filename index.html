@@ -1,63 +1,107 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Thanaweya Cinematic Plan</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Cairo', 'sans-serif'],
-            },
-            colors: {
-              'cine-dark': '#0f172a',
-              'cine-card': '#1e293b',
-              'cine-accent': '#38bdf8',
-              'eng-primary': '#1d4ed8',
-              'arb-primary': '#059669',
-              'chem-primary': '#7c3aed',
-              'phys-primary': '#be185d',
-              'math-primary': '#ea580c',
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thanaweya Cinematic Plan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'sans-serif'],
           },
+          colors: {
+            'cine-dark': '#0f172a',
+            'cine-card': '#1e293b',
+            'cine-accent': '#38bdf8',
+            'eng-primary': '#1d4ed8',
+            'arb-primary': '#059669',
+            'chem-primary': '#7c3aed',
+            'phys-primary': '#be185d',
+            'math-primary': '#ea580c',
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'float': 'float 3s ease-in-out infinite',
+            'glow': 'glow 2s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            glow: {
+              '0%': { 'box-shadow': '0 0 5px rgba(56, 189, 248, 0.2)' },
+              '100%': { 'box-shadow': '0 0 20px rgba(56, 189, 248, 0.4)' },
+            }
+          }
         },
-      }
-    </script>
-    <style>
-      body {
-        background-color: #020617;
-        color: #f8fafc;
-      }
-      /* Custom scrollbar for a sleeker look */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #0f172a; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #334155; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569; 
-      }
-    </style>
+      },
+    }
+  </script>
+  <style>
+    body {
+      background-color: #020617;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .glass-input {
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .glass-input:focus {
+      background: rgba(0, 0, 0, 0.4);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    /* Custom scrollbar for a sleeker look */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .animate-glow {
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -66,12 +110,15 @@
     "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.95.3",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0"
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "@google/genai": "https://esm.sh/@google/genai@^0.21.0"
   }
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-  </body>
+
+<body>
+  <div id="root"></div>
+</body>
+
 </html>

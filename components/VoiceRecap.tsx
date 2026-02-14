@@ -1,0 +1,272 @@
+
+import React, { useState, useRef } from 'react';
+import { Mic, Send, Loader2, Award, AlertCircle, BookOpen, Volume2, Square } from 'lucide-react';
+import { GradeLevel, VoiceTutorResponse } from '../types';
+import { evaluateRecap, transcribeAudio, generateSpeech } from '../services/geminiService';
+
+interface VoiceRecapProps {
+    gradeLevel: GradeLevel;
+}
+
+// Helper to convert Blob to Base64
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            const base64Data = base64String.split(',')[1];
+            resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
+function decode(base64: string) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+}
+
+async function decodeAudioData(
+    data: Uint8Array,
+    ctx: AudioContext,
+    sampleRate: number,
+    numChannels: number,
+): Promise<AudioBuffer> {
+    const dataInt16 = new Int16Array(data.buffer);
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+    for (let channel = 0; channel < numChannels; channel++) {
+        const channelData = buffer.getChannelData(channel);
+        for (let i = 0; i < frameCount; i++) {
+            channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+        }
+    }
+    return buffer;
+}
+
+const VoiceRecap: React.FC<VoiceRecapProps> = ({ gradeLevel }) => {
+    const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [transcript, setTranscript] = useState('');
+    const [subject, setSubject] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<VoiceTutorResponse | null>(null);
+    const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
+
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                stream.getTracks().forEach(track => track.stop());
+                await handleTranscription(audioBlob);
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (error) {
+            console.error("Error accessing microphone:", error);
+            alert("يرجى السماح باستخدام الميكروفون.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const handleTranscription = async (audioBlob: Blob) => {
+        setIsTranscribing(true);
+        try {
+            const base64Audio = await blobToBase64(audioBlob);
+            const text = await transcribeAudio(base64Audio, 'audio/webm');
+            setTranscript(prev => (prev ? prev + ' ' + text : text));
+        } catch (error) {
+            console.error("Transcription failed", error);
+            alert("فشل تحويل الصوت إلى نص. حاول مرة أخرى.");
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
+
+    const handleEvaluate = async () => {
+        if (!transcript || !subject) return;
+        setLoading(true);
+        try {
+            const evaluation = await evaluateRecap(transcript, subject, gradeLevel);
+            setResult(evaluation);
+        } catch (e) {
+            console.error(e);
+            alert("حدث خطأ أثناء التصحيح. حاول مرة أخرى.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePlayFeedback = async () => {
+        if (!result?.feedback) return;
+        setIsGeneratingSpeech(true);
+        try {
+            const base64Audio = await generateSpeech(result.feedback);
+            const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+            const outputNode = outputAudioContext.createGain();
+            const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
+            const source = outputAudioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(outputNode);
+            outputNode.connect(outputAudioContext.destination);
+            source.start();
+        } catch (e) {
+            console.error("TTS Failed", e);
+            alert("فشل توليد الصوت.");
+        } finally {
+            setIsGeneratingSpeech(false);
+        }
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto animate-fade-in text-right">
+            <div className="text-center mb-10">
+                <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-blue-500 mb-2">
+                    المعلم الصوتي
+                </h2>
+                <p className="text-slate-500">اشرح الدرس بصوتك، وسيقوم المعلم الرقمي بتقييم فهمك</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+                {/* Results Section */}
+                <div className="space-y-6 order-2 md:order-1">
+                    {result ? (
+                        <>
+                            <div className="glass-panel p-8 rounded-[30px] border border-blue-500/30 bg-blue-900/10 text-center relative overflow-hidden animate-fade-in">
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><Award className="w-32 h-32" /></div>
+                                <div className="relative z-10">
+                                    <span className="text-blue-400 font-bold text-xs uppercase">درجة الاستيعاب</span>
+                                    <div className="text-6xl font-extrabold text-white my-4">{result.score}%</div>
+
+                                    <div className="flex flex-col items-center gap-4">
+                                        <p className="text-blue-200 text-lg font-serif">"{result.feedback}"</p>
+                                        <button
+                                            onClick={handlePlayFeedback}
+                                            disabled={isGeneratingSpeech}
+                                            className="flex items-center gap-2 text-xs bg-cine-accent/10 hover:bg-cine-accent/20 text-cine-accent px-4 py-2 rounded-full transition-colors border border-cine-accent/20"
+                                        >
+                                            {isGeneratingSpeech ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4" />}
+                                            {isGeneratingSpeech ? "جاري التوليد..." : "استمع للتقييم"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="glass-panel p-6 rounded-[24px] border border-white/5 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                                <h4 className="text-amber-400 font-bold mb-4 flex items-center gap-2 justify-end">
+                                    مفاهيم ناقصة <AlertCircle className="w-5 h-5" />
+                                </h4>
+                                <ul className="space-y-2">
+                                    {result.missingConcepts.map((item, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm bg-white/5 p-3 rounded-lg justify-end">
+                                            {item} <span className="text-amber-500 mt-1">•</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="glass-panel p-6 rounded-[24px] border border-white/5 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                                <h4 className="text-emerald-400 font-bold mb-4 flex items-center gap-2 justify-end">
+                                    التصحيح النموذجي <BookOpen className="w-5 h-5" />
+                                </h4>
+                                <p className="text-slate-300 leading-relaxed text-sm">
+                                    {result.correction}
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center glass-panel rounded-[30px] border-dashed border-2 border-slate-800 p-10 opacity-50">
+                            <Mic className="w-16 h-16 text-slate-600 mb-4" />
+                            <p className="text-slate-500 text-center">بانتظار شرحك لتقييمه... <br />تذكر: أفضل طريقة للتعلم هي الشرح.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Input Section */}
+                <div className="glass-panel p-6 rounded-[30px] border border-white/5 order-1 md:order-2">
+                    <div className="mb-6">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">المادة التي تذاكرها</label>
+                        <input
+                            type="text"
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            placeholder="مثال: التاريخ - الحملة الفرنسية"
+                            className="glass-input w-full p-4 rounded-xl text-slate-200 text-right"
+                        />
+                    </div>
+
+                    <div className="relative mb-6">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">شرحك الصوتي</label>
+                        <textarea
+                            value={transcript}
+                            onChange={(e) => setTranscript(e.target.value)}
+                            placeholder={isTranscribing ? "جاري تحويل صوتك لنص..." : "اضغط على الميكروفون وابدأ الشرح كأنك المدرس..."}
+                            className="glass-input w-full h-80 p-4 rounded-xl resize-none leading-loose text-lg pb-16 text-right"
+                            disabled={isTranscribing}
+                        />
+
+                        <div className="absolute bottom-4 left-4 flex gap-2">
+                            {isTranscribing && (
+                                <div className="flex items-center gap-2 text-cine-accent text-xs bg-black/40 px-3 py-1 rounded-full border border-cine-accent/20">
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    جاري المعالجة...
+                                </div>
+                            )}
+
+                            <button
+                                onClick={isRecording ? stopRecording : startRecording}
+                                disabled={isTranscribing}
+                                className={`p-4 rounded-full transition-all shadow-lg border ${isRecording
+                                        ? 'bg-red-500 text-white border-red-400 animate-pulse shadow-red-500/50'
+                                        : 'bg-slate-800/50 border-white/10 text-slate-300 hover:bg-blue-600 hover:text-white hover:border-blue-500'
+                                    }`}
+                                title={isRecording ? "إيقاف التسجيل" : "بدء التسجيل"}
+                            >
+                                {isRecording ? <Square className="w-6 h-6 fill-current" /> : <Mic className="w-6 h-6" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleEvaluate}
+                        disabled={loading || isRecording || isTranscribing || !transcript.trim() || !subject.trim()}
+                        className="w-full bg-cine-accent hover:opacity-90 text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cine-accent/20"
+                    >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                        {loading ? 'جاري التصحيح...' : ' قيم شرحي الآن'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default VoiceRecap;
